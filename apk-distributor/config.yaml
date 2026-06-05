@@ -1,0 +1,88 @@
+# APK Distributor — configuration
+# Run with: apk-distributor -config config.yaml
+
+# Host running the Android emulator(s). Use localhost for a local setup.
+adb_host: localhost
+
+# Seconds between version checks across all configured packages.
+poll_interval: 30
+
+# Directory where extracted APKs and XAPKs are written.
+# Structure: output_dir/<package.name>/<versionCode>.(apk|xapk)
+output_dir: ./apks
+
+# One entry per target ABI. Each requires a running AVD with a matching Google Play
+# system image. Play Store only installs the ABI splits relevant to each device, so
+# one emulator per target ABI is needed to collect the full split set.
+#
+# Splits from all listed emulators are merged into a single .xapk at extraction time —
+# downstream devices receive the correct splits regardless of architecture.
+#
+# For a homogeneous fleet, a single entry is sufficient.
+#
+# ADB port = emulator console port + 1 (e.g. -port 5554 → ADB on 5555).
+# Verify with: adb connect localhost:<port> && adb devices
+emulators:
+  - port: 5555
+    abi: x86_64          # API 37 x86_64 emulator on localhost
+  # - port: 5557
+  #   abi: arm64-v8a     # add a second emulator for arm64 splits if needed
+
+# Android package names to track. Must be installed on all configured emulators.
+# This list is static — edit config.yaml and the service reloads automatically.
+# You can also manage packages dynamically via the HTTP API (see api_port below)
+# or by editing packages.json in the same directory as this config file.
+# Both sources are merged; duplicates are silently deduplicated.
+packages:
+  - com.urbandroid.lux    # Twilight — tiny single APK, good baseline test
+  - com.microsoft.teams   # Teams — large split APK, exercises XAPK bundling
+
+# Optional HTTP API for managing tracked packages at runtime without editing
+# config.yaml. Disabled by default (api_port = 0 or absent).
+#
+# Endpoints:
+#   GET    /health                  service liveness (no auth required)
+#   GET    /packages                list all tracked packages with last-seen version
+#   POST   /packages                add a package  (body: {"name":"com.example.app"})
+#   GET    /packages/{name}         get one package's version info
+#   DELETE /packages/{name}         remove a package
+#
+# SECURITY: This service is the APK source for production MDM fleets.
+# A compromise here means pushing malicious APKs to managed devices.
+#
+# api_host: bind address. 127.0.0.1 (default) is localhost-only.
+#           Never expose to untrusted networks without additional auth/TLS.
+#
+# api_token: Bearer token required on all non-health endpoints.
+#            STRONGLY recommended. Generate with: openssl rand -hex 32
+#            Must be at least 32 characters. Keep this file chmod 600.
+#
+# Keep this file owner-readable only: chmod 600 config.yaml
+api_host: 127.0.0.1
+api_port: 8080
+# api_token: replace-this-with-output-of-openssl-rand-hex-32
+
+# Hard ceiling on APK file size pulled from the emulator (megabytes).
+# A compromised emulator cannot exhaust disk by returning an oversized file.
+# Default: 1024 MB. Real-world APKs are typically under 500 MB.
+# max_apk_size_mb: 1024
+
+# Per-package expected signing certificate fingerprints (SHA-256).
+#
+# STRONGLY recommended for production. If an emulator is compromised and Play
+# Store is replaced with a malicious version, it could serve a repackaged APK
+# signed with an attacker key. Certificate pinning catches this at the
+# cryptographic level — the developer's signing key cannot be forged.
+#
+# How to get the fingerprint for a package you already have:
+#   apksigner verify --print-certs <path>.apk
+#   keytool -printcert -jarfile <path>.apk
+# Both print "SHA-256 digest:" — copy that line (colons optional).
+#
+# Requires apksigner from Android SDK build-tools. Set ANDROID_HOME or ensure
+# build-tools is on PATH. When this is set for a package and apksigner is
+# unavailable, extraction fails rather than proceeding without verification.
+#
+# expected_certs:
+#   com.urbandroid.lux: "AA:BB:CC:DD:..."   # replace with real fingerprint
+#   com.microsoft.teams: "AA:BB:CC:DD:..."  # replace with real fingerprint
