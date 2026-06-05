@@ -155,8 +155,8 @@ The codebase is intentionally structured as a library with an executable on top.
 
 ```bash
 # Clone
-git clone https://github.com/richardcornall/apk-distributor
-cd apk-distributor
+git clone https://github.com/richardcornall/play-apk-distributor
+cd play-apk-distributor
 
 # Build
 go build -o apk-distributor .

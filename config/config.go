@@ -42,15 +42,15 @@ type Emulator struct {
 
 // Snapshot is an immutable copy of the active configuration values.
 type Snapshot struct {
-	ADBHost      string
-	PollInterval time.Duration
-	OutputDir    string
-	Emulators    []Emulator
-	Packages     []string
-	APIHost      string
-	APIPort      int
-	APIToken     string            // Bearer token required on non-health API endpoints; empty = no auth (warn)
-	MaxAPKSizeMB int               // hard ceiling per pulled APK file; 0 uses defaultMaxAPKSizeMB
+	ADBHost       string
+	PollInterval  time.Duration
+	OutputDir     string
+	Emulators     []Emulator
+	Packages      []string
+	APIHost       string
+	APIPort       int
+	APIToken      string            // Bearer token required on non-health API endpoints; empty = no auth (warn)
+	MaxAPKSizeMB  int               // hard ceiling per pulled APK file; 0 uses defaultMaxAPKSizeMB
 	ExpectedCerts map[string]string // package → normalised SHA-256 cert fingerprint (64 lowercase hex chars)
 }
 
@@ -204,6 +204,22 @@ func (c *Config) reload() error {
 }
 
 func validate(r *raw) error {
+	if err := validateCore(r); err != nil {
+		return err
+	}
+	if err := validateEmulators(r.Emulators); err != nil {
+		return err
+	}
+	if err := validatePackageNames(r.Packages); err != nil {
+		return err
+	}
+	if err := validateAPI(r.APIPort, r.APIToken); err != nil {
+		return err
+	}
+	return validateExpectedCerts(r.ExpectedCerts)
+}
+
+func validateCore(r *raw) error {
 	if r.ADBHost == "" {
 		return errors.New("adb_host is required")
 	}
@@ -216,11 +232,18 @@ func validate(r *raw) error {
 	if r.OutputDir == "" {
 		return errors.New("output_dir is required")
 	}
-	if len(r.Emulators) == 0 {
+	if r.MaxAPKSizeMB < 0 {
+		return errors.New("max_apk_size_mb must be non-negative (0 uses the default of 1024 MB)")
+	}
+	return nil
+}
+
+func validateEmulators(emulators []Emulator) error {
+	if len(emulators) == 0 {
 		return errors.New("at least one emulator entry is required")
 	}
 	seen := map[int]bool{}
-	for i, e := range r.Emulators {
+	for i, e := range emulators {
 		if e.Port < 1 || e.Port > 65535 {
 			return fmt.Errorf("emulators[%d]: port %d out of range", i, e.Port)
 		}
@@ -232,21 +255,30 @@ func validate(r *raw) error {
 			return fmt.Errorf("emulators[%d]: unknown abi %q — valid: arm64-v8a, armeabi-v7a, x86_64, x86", i, e.ABI)
 		}
 	}
-	for _, p := range r.Packages {
+	return nil
+}
+
+func validatePackageNames(packages []string) error {
+	for _, p := range packages {
 		if !validPackageName.MatchString(p) {
 			return fmt.Errorf("invalid package name %q", p)
 		}
 	}
-	if r.APIPort != 0 && (r.APIPort < 1 || r.APIPort > 65535) {
-		return fmt.Errorf("api_port %d out of range (1–65535)", r.APIPort)
+	return nil
+}
+
+func validateAPI(port int, token string) error {
+	if port != 0 && (port < 1 || port > 65535) {
+		return fmt.Errorf("api_port %d out of range (1–65535)", port)
 	}
-	if r.APIToken != "" && len(r.APIToken) < minAPITokenLen {
+	if token != "" && len(token) < minAPITokenLen {
 		return fmt.Errorf("api_token must be at least %d characters", minAPITokenLen)
 	}
-	if r.MaxAPKSizeMB < 0 {
-		return errors.New("max_apk_size_mb must be non-negative (0 uses the default of 1024 MB)")
-	}
-	for pkg, fp := range r.ExpectedCerts {
+	return nil
+}
+
+func validateExpectedCerts(certs map[string]string) error {
+	for pkg, fp := range certs {
 		if !validPackageName.MatchString(pkg) {
 			return fmt.Errorf("expected_certs: invalid package name %q", pkg)
 		}

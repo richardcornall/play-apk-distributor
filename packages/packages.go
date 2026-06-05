@@ -17,8 +17,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )

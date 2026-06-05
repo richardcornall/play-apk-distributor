@@ -27,44 +27,73 @@ func main() {
 	debug := flag.Bool("debug", false, "enable debug-level logging")
 	flag.Parse()
 
-	logLevel := slog.LevelInfo
-	if *debug {
-		logLevel = slog.LevelDebug
-	}
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})))
-
-	// On Unix, warn if config is readable or writable by group/world.
-	// A world-readable config exposes api_token; a writable config allows
-	// injection of malicious packages or redirection of output.
+	setupLogging(*debug)
 	checkConfigPermissions(*cfgPath)
 
-	cfg, err := config.Load(*cfgPath)
+	cfg, snap := loadConfig(*cfgPath)
+	st := openStore(snap.OutputDir)
+	pkgMgr := openPackages(*cfgPath, snap)
+	clients := connectEmulators(snap)
+
+	s := sink.Noop{}
+	w := watcher.New(cfg, pkgMgr, st, clients, s)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if snap.APIPort > 0 {
+		startAPI(ctx, snap, pkgMgr, st)
+	}
+
+	slog.Info("apk-distributor started",
+		"config", *cfgPath,
+		"output_dir", snap.OutputDir,
+		"packages", len(pkgMgr.List()),
+		"max_apk_size_mb", snap.MaxAPKSizeMB,
+		"api_enabled", snap.APIPort > 0,
+	)
+	w.Run(ctx)
+	slog.Info("apk-distributor stopped")
+}
+
+func setupLogging(debug bool) {
+	level := slog.LevelInfo
+	if debug {
+		level = slog.LevelDebug
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
+}
+
+func loadConfig(cfgPath string) (*config.Config, config.Snapshot) {
+	cfg, err := config.Load(cfgPath)
 	if err != nil {
-		slog.Error("failed to load config", "path", *cfgPath, "err", err)
+		slog.Error("failed to load config", "path", cfgPath, "err", err)
 		os.Exit(1)
 	}
 	if err := cfg.Watch(); err != nil {
 		slog.Error("failed to start config watcher", "err", err)
 		os.Exit(1)
 	}
-
 	snap := cfg.Get()
-
 	if err := os.MkdirAll(snap.OutputDir, 0750); err != nil {
 		slog.Error("failed to create output dir", "path", snap.OutputDir, "err", err)
 		os.Exit(1)
 	}
-
-	// Pre-clean any leftover private temp dirs from prior unclean shutdowns.
 	cleanTmpDir(filepath.Join(snap.OutputDir, ".tmp"))
+	return cfg, snap
+}
 
-	st, err := store.Open(snap.OutputDir)
+func openStore(outputDir string) *store.Store {
+	st, err := store.Open(outputDir)
 	if err != nil {
 		slog.Error("failed to open store", "err", err)
 		os.Exit(1)
 	}
+	return st
+}
 
-	pkgMgr, err := packages.New(filepath.Dir(*cfgPath))
+func openPackages(cfgPath string, snap config.Snapshot) *packages.Manager {
+	pkgMgr, err := packages.New(filepath.Dir(cfgPath))
 	if err != nil {
 		slog.Error("failed to open packages manager", "err", err)
 		os.Exit(1)
@@ -79,7 +108,10 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	return pkgMgr
+}
 
+func connectEmulators(snap config.Snapshot) []adb.Device {
 	clients := make([]adb.Device, 0, len(snap.Emulators))
 	for _, e := range snap.Emulators {
 		c := adb.New(snap.ADBHost, e.Port, e.ABI)
@@ -90,41 +122,26 @@ func main() {
 		}
 		clients = append(clients, c)
 	}
+	return clients
+}
 
-	s := sink.Noop{}
-	w := watcher.New(cfg, pkgMgr, st, clients, s)
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if snap.APIPort > 0 {
-		warnAPISecurityPosture(snap)
-		addr := fmt.Sprintf("%s:%d", snap.APIHost, snap.APIPort)
-		srv := api.New(addr, snap.APIToken, pkgMgr, st)
-		go func() {
-			if err := srv.Start(); err != nil && err != http.ErrServerClosed {
-				slog.Error("api server error", "err", err)
-			}
-		}()
-		go func() {
-			<-ctx.Done()
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := srv.Shutdown(shutdownCtx); err != nil {
-				slog.Error("api server shutdown error", "err", err)
-			}
-		}()
-	}
-
-	slog.Info("apk-distributor started",
-		"config", *cfgPath,
-		"output_dir", snap.OutputDir,
-		"packages", len(pkgMgr.List()),
-		"max_apk_size_mb", snap.MaxAPKSizeMB,
-		"api_enabled", snap.APIPort > 0,
-	)
-	w.Run(ctx)
-	slog.Info("apk-distributor stopped")
+func startAPI(ctx context.Context, snap config.Snapshot, pkgMgr *packages.Manager, st *store.Store) {
+	warnAPISecurityPosture(snap)
+	addr := fmt.Sprintf("%s:%d", snap.APIHost, snap.APIPort)
+	srv := api.New(addr, snap.APIToken, pkgMgr, st)
+	go func() {
+		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
+			slog.Error("api server error", "err", err)
+		}
+	}()
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("api server shutdown error", "err", err)
+		}
+	}()
 }
 
 // warnAPISecurityPosture logs prominent warnings when the API is running without

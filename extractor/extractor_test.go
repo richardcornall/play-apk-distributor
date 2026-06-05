@@ -42,8 +42,8 @@ func TestSafeFilename_Valid(t *testing.T) {
 
 func TestSafeFilename_Blocked(t *testing.T) {
 	cases := []string{
-		"../../etc/passwd",    // no .apk extension after path.Base → "passwd"
-		"/etc/shadow",         // no .apk extension → "shadow"
+		"../../etc/passwd", // no .apk extension after path.Base → "passwd"
+		"/etc/shadow",      // no .apk extension → "shadow"
 		"file with spaces.apk",
 		"file\x00null.apk",
 		"file;rm.apk",

@@ -61,49 +61,14 @@ func Extract(ctx context.Context, pkg string, versionCode int, versionName strin
 	collected := map[string]string{}
 	isSplit := false
 
+	expectedCert := expectedCerts[pkg]
 	for _, client := range clients {
-		if !client.IsConnected() {
-			slog.Warn("skipping offline emulator during extraction", "serial", client.Serial(), "abi", client.ABI(), "pkg", pkg)
-			continue
-		}
-		devicePaths, err := client.PullAPKPaths(pkg)
+		split, err := pullFromClient(ctx, client, pkg, tmpDir, maxBytes, expectedCert, collected)
 		if err != nil {
-			slog.Error("failed to get APK paths", "pkg", pkg, "serial", client.Serial(), "err", err)
-			continue
-		}
-		if len(devicePaths) > 1 {
-			isSplit = true
-		}
-
-		emulatorDir := filepath.Join(tmpDir, client.ABI())
-		if err := os.MkdirAll(emulatorDir, 0700); err != nil {
 			return "", err
 		}
-
-		for _, devicePath := range devicePaths {
-			filename, err := safeFilename(devicePath)
-			if err != nil {
-				return "", fmt.Errorf("unsafe path from device on %s: %w", client.Serial(), err)
-			}
-			if _, exists := collected[filename]; exists {
-				continue // shared split already pulled from another emulator
-			}
-			localPath := filepath.Join(emulatorDir, filename)
-			if err := client.PullFile(devicePath, localPath); err != nil {
-				return "", fmt.Errorf("pull %s from %s: %w", filename, client.Serial(), err)
-			}
-			if info, err := os.Stat(localPath); err == nil && info.Size() > maxBytes {
-				os.Remove(localPath)
-				return "", fmt.Errorf("APK %s from %s is %d MB, exceeds max_apk_size_mb (%d MB) — aborting extraction",
-					filename, client.Serial(), info.Size()/(1024*1024), maxAPKSizeMB)
-			}
-			if fp, ok := expectedCerts[pkg]; ok {
-				if err := verifyAPKSignature(ctx, localPath, fp); err != nil {
-					os.Remove(localPath)
-					return "", fmt.Errorf("signature verification failed for %s pulled from %s: %w", filename, client.Serial(), err)
-				}
-			}
-			collected[filename] = localPath
+		if split {
+			isSplit = true
 		}
 	}
 
@@ -149,6 +114,62 @@ func Extract(ctx context.Context, pkg string, versionCode int, versionName strin
 		slog.Error("sink OnArtifact failed", "pkg", pkg, "err", err)
 	}
 	return outPath, nil
+}
+
+// pullFromClient pulls all APK splits for pkg from a single client into collected.
+// Returns true if the app has multiple splits (indicating an XAPK is needed).
+func pullFromClient(ctx context.Context, client adb.Device, pkg, tmpDir string, maxBytes int64, expectedCert string, collected map[string]string) (isSplit bool, err error) {
+	if !client.IsConnected() {
+		slog.Warn("skipping offline emulator during extraction", "serial", client.Serial(), "abi", client.ABI(), "pkg", pkg)
+		return false, nil
+	}
+	devicePaths, err := client.PullAPKPaths(pkg)
+	if err != nil {
+		slog.Error("failed to get APK paths", "pkg", pkg, "serial", client.Serial(), "err", err)
+		return false, nil
+	}
+	if len(devicePaths) > 1 {
+		isSplit = true
+	}
+	emulatorDir := filepath.Join(tmpDir, client.ABI())
+	if err := os.MkdirAll(emulatorDir, 0700); err != nil {
+		return false, err
+	}
+	for _, devicePath := range devicePaths {
+		if err := pullOneAPK(ctx, client, devicePath, emulatorDir, maxBytes, expectedCert, collected); err != nil {
+			return false, err
+		}
+	}
+	return isSplit, nil
+}
+
+// pullOneAPK pulls a single APK from the device, enforces the size limit,
+// verifies the signing certificate if configured, and adds it to collected.
+func pullOneAPK(ctx context.Context, client adb.Device, devicePath, emulatorDir string, maxBytes int64, expectedCert string, collected map[string]string) error {
+	filename, err := safeFilename(devicePath)
+	if err != nil {
+		return fmt.Errorf("unsafe path from device on %s: %w", client.Serial(), err)
+	}
+	if _, exists := collected[filename]; exists {
+		return nil // shared split already pulled from another emulator
+	}
+	localPath := filepath.Join(emulatorDir, filename)
+	if err := client.PullFile(devicePath, localPath); err != nil {
+		return fmt.Errorf("pull %s from %s: %w", filename, client.Serial(), err)
+	}
+	if info, err := os.Stat(localPath); err == nil && info.Size() > maxBytes {
+		os.Remove(localPath)
+		return fmt.Errorf("APK %s from %s is %d MB, exceeds limit — aborting extraction",
+			filename, client.Serial(), info.Size()/(1024*1024))
+	}
+	if expectedCert != "" {
+		if err := verifyAPKSignature(ctx, localPath, expectedCert); err != nil {
+			os.Remove(localPath)
+			return fmt.Errorf("signature verification failed for %s pulled from %s: %w", filename, client.Serial(), err)
+		}
+	}
+	collected[filename] = localPath
+	return nil
 }
 
 // safeFilename extracts the base filename from a device path and validates it.
