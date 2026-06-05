@@ -1,6 +1,6 @@
-# apk-distributor
+# apk-distributor 
 
-A self-hosted Go service that monitors headless Android emulators, detects Play Store app updates, extracts the latest APKs, and writes them to a local directory — ready to be consumed by any downstream system.
+A self-hosted Go service that monitors headless Android emulators, detects Play Store app updates, extracts the latest APKs, and writes them to a local directory — ready to be consumed by any downstream system. 
 
 Built for production MDM pipelines, fleet management, cloud APK distribution, automated testing, and any other use case where you need the canonical, Play-Store-sourced APK for an Android package without manual intervention.
 
