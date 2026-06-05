@@ -1,10 +1,10 @@
 # Go
-apk-distributor/apk-distributor
-apk-distributor/apk-distributor.exe
-apk-distributor/apks/
-apk-distributor/state/
-apk-distributor/packages.json
-apk-distributor/.tmp/
+apk-distributor
+apk-distributor.exe
+apks/
+state/
+packages.json
+.tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
