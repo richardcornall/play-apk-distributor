@@ -1,4 +1,9 @@
-# apk-distributor 
+# play-apk-distributor
+
+[![CI](https://github.com/richardcornall/play-apk-distributor/actions/workflows/ci.yml/badge.svg)](https://github.com/richardcornall/play-apk-distributor/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/richardcornall/play-apk-distributor)](https://goreportcard.com/report/github.com/richardcornall/play-apk-distributor)
+[![Go 1.22+](https://img.shields.io/badge/go-1.22+-blue.svg)](https://golang.org/dl/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A self-hosted Go service that monitors headless Android emulators, detects Play Store app updates, extracts the latest APKs, and writes them to a local directory — ready to be consumed by any downstream system. 
 
