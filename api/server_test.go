@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/richardcornall/apk-distributor/api"
-	"github.com/richardcornall/apk-distributor/packages"
-	"github.com/richardcornall/apk-distributor/store"
+	"github.com/richardcornall/play-apk-distributor/api"
+	"github.com/richardcornall/play-apk-distributor/packages"
+	"github.com/richardcornall/play-apk-distributor/store"
 )
 
 func newTestServer(t *testing.T) (*api.Server, *packages.Manager, *store.Store) {
@@ -213,7 +213,7 @@ func TestDeletePackage_InvalidName(t *testing.T) {
 // --- authentication ---
 
 func TestAuth_NoTokenAllowsAll(t *testing.T) {
-	// No token configured — all requests pass through.
+	// No token configured â€” all requests pass through.
 	srv, _, _ := newTestServerWithToken(t, "")
 	w := roundTrip(t, srv, http.MethodGet, "/packages", nil, "")
 	if w.Code != http.StatusOK {

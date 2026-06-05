@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/richardcornall/apk-distributor/sink"
+	"github.com/richardcornall/play-apk-distributor/sink"
 )
 
 var testArtifact = sink.Artifact{
@@ -55,7 +55,7 @@ func TestFanout_AbortsOnFirstError(t *testing.T) {
 	if !errors.Is(err, sentinel) {
 		t.Errorf("expected sentinel error, got: %v", err)
 	}
-	// first counter fired, then failing aborted — second counter never runs
+	// first counter fired, then failing aborted â€” second counter never runs
 	if calls != 1 {
 		t.Errorf("expected 1 call before abort, got %d", calls)
 	}

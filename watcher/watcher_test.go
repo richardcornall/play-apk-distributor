@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/richardcornall/apk-distributor/adb"
-	"github.com/richardcornall/apk-distributor/config"
-	"github.com/richardcornall/apk-distributor/packages"
-	"github.com/richardcornall/apk-distributor/sink"
-	"github.com/richardcornall/apk-distributor/store"
-	"github.com/richardcornall/apk-distributor/watcher"
+	"github.com/richardcornall/play-apk-distributor/adb"
+	"github.com/richardcornall/play-apk-distributor/config"
+	"github.com/richardcornall/play-apk-distributor/packages"
+	"github.com/richardcornall/play-apk-distributor/sink"
+	"github.com/richardcornall/play-apk-distributor/store"
+	"github.com/richardcornall/play-apk-distributor/watcher"
 )
 
 // fakeDevice implements adb.Device for tests. All fields are set directly.
@@ -163,7 +163,7 @@ func TestWatcher_NoUpdateSkipsExtraction(t *testing.T) {
 		t.Fatalf("want 1 artifact after first poll, got %d", len(s.artifacts))
 	}
 
-	// Second poll — same version — should not extract again.
+	// Second poll â€” same version â€” should not extract again.
 	runOnePoll(t, w)
 	if len(s.artifacts) != 1 {
 		t.Errorf("want no additional artifact on second poll, got %d total", len(s.artifacts))
@@ -224,7 +224,7 @@ func TestWatcher_VersionMismatchBlocksExtraction(t *testing.T) {
 		paths:   []string{"/data/app/com.example.app/base.apk"},
 	}
 	d2 := &fakeDevice{serial: "localhost:5557", abi: "arm64-v8a", connected: true,
-		version: adb.VersionInfo{Code: 99, Name: "0.9"}, // behind — not yet updated
+		version: adb.VersionInfo{Code: 99, Name: "0.9"}, // behind â€” not yet updated
 		paths:   []string{"/data/app/com.example.app/base.apk"},
 	}
 	w, _, s := setup(t, []adb.Device{d1, d2}, []string{"com.example.app"})
@@ -246,7 +246,7 @@ func TestWatcher_VersionMismatchResolvesOnNextPoll(t *testing.T) {
 	}
 	w, _, s := setup(t, []adb.Device{d1, d2}, []string{"com.example.app"})
 
-	runOnePoll(t, w) // mismatch — no extraction
+	runOnePoll(t, w) // mismatch â€” no extraction
 	if len(s.artifacts) != 0 {
 		t.Fatalf("first poll: mismatch should block extraction")
 	}
@@ -283,7 +283,7 @@ func TestWatcher_AllOfflineNoExtraction(t *testing.T) {
 		abi:       "x86_64",
 		connected: false,
 	}
-	// Reconnect also fails — simulate a truly dead emulator.
+	// Reconnect also fails â€” simulate a truly dead emulator.
 	// We override Reconnect by leaving connected=false so GetInstalledVersion
 	// will still be called but fail via versionErr.
 	device.versionErr = os.ErrNotExist

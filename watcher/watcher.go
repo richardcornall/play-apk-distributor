@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/richardcornall/apk-distributor/adb"
-	"github.com/richardcornall/apk-distributor/config"
-	"github.com/richardcornall/apk-distributor/extractor"
-	"github.com/richardcornall/apk-distributor/packages"
-	"github.com/richardcornall/apk-distributor/sink"
-	"github.com/richardcornall/apk-distributor/store"
+	"github.com/richardcornall/play-apk-distributor/adb"
+	"github.com/richardcornall/play-apk-distributor/config"
+	"github.com/richardcornall/play-apk-distributor/extractor"
+	"github.com/richardcornall/play-apk-distributor/packages"
+	"github.com/richardcornall/play-apk-distributor/sink"
+	"github.com/richardcornall/play-apk-distributor/store"
 )
 
 // Watcher polls all configured emulators and triggers extraction when a version changes.
@@ -138,12 +138,12 @@ func (w *Watcher) checkPackage(ctx context.Context, pkg, outputDir string) {
 		return
 	}
 
-	// All connected emulators must agree on version before extracting —
+	// All connected emulators must agree on version before extracting â€”
 	// a mismatch means one Play Store hasn't updated yet, producing mismatched splits.
 	base := connected[0]
 	for _, r := range connected[1:] {
 		if r.info.Code != base.info.Code {
-			slog.Warn("version mismatch between emulators — waiting for consistency",
+			slog.Warn("version mismatch between emulators â€” waiting for consistency",
 				"pkg", pkg,
 				"serial_a", base.client.Serial(), "code_a", base.info.Code,
 				"serial_b", r.client.Serial(), "code_b", r.info.Code,
@@ -176,7 +176,7 @@ func (w *Watcher) checkPackage(ctx context.Context, pkg, outputDir string) {
 	snap2 := w.cfg.Get()
 	outPath, err := extractor.Extract(ctx, pkg, agreedCode, agreedName, outputDir, snap2.MaxAPKSizeMB, snap2.ExpectedCerts, clients, w.sink)
 	if err != nil {
-		slog.Error("extraction failed — will retry next poll", "pkg", pkg, "version_code", agreedCode, "err", err)
+		slog.Error("extraction failed â€” will retry next poll", "pkg", pkg, "version_code", agreedCode, "err", err)
 		return
 	}
 

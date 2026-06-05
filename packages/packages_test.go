@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/richardcornall/apk-distributor/packages"
+	"github.com/richardcornall/play-apk-distributor/packages"
 )
 
 // --- ValidatePackageName ---
@@ -159,7 +159,7 @@ func TestManager_Persistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !m2.Has("com.example.app") {
-		t.Error("package not persisted — second Manager doesn't see it")
+		t.Error("package not persisted â€” second Manager doesn't see it")
 	}
 }
 
@@ -214,7 +214,7 @@ func TestManager_OnChangeFires(t *testing.T) {
 }
 
 // TestManager_WatchAndSeed verifies that starting Watch() then immediately
-// calling Seed() does not produce a file-lock error — the race that occurs on
+// calling Seed() does not produce a file-lock error â€” the race that occurs on
 // Windows where fsnotify fires before the write handle is released.
 func TestManager_WatchAndSeed(t *testing.T) {
 	dir := t.TempDir()

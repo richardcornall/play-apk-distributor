@@ -13,13 +13,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/richardcornall/apk-distributor/adb"
-	"github.com/richardcornall/apk-distributor/api"
-	"github.com/richardcornall/apk-distributor/config"
-	"github.com/richardcornall/apk-distributor/packages"
-	"github.com/richardcornall/apk-distributor/sink"
-	"github.com/richardcornall/apk-distributor/store"
-	"github.com/richardcornall/apk-distributor/watcher"
+	"github.com/richardcornall/play-apk-distributor/adb"
+	"github.com/richardcornall/play-apk-distributor/api"
+	"github.com/richardcornall/play-apk-distributor/config"
+	"github.com/richardcornall/play-apk-distributor/packages"
+	"github.com/richardcornall/play-apk-distributor/sink"
+	"github.com/richardcornall/play-apk-distributor/store"
+	"github.com/richardcornall/play-apk-distributor/watcher"
 )
 
 func main() {
@@ -116,7 +116,7 @@ func connectEmulators(snap config.Snapshot) []adb.Device {
 	for _, e := range snap.Emulators {
 		c := adb.New(snap.ADBHost, e.Port, e.ABI)
 		if err := c.Connect(); err != nil {
-			slog.Warn("initial connect failed — will retry during polling", "serial", c.Serial(), "abi", e.ABI, "err", err)
+			slog.Warn("initial connect failed â€” will retry during polling", "serial", c.Serial(), "abi", e.ABI, "err", err)
 		} else {
 			slog.Info("connected to emulator", "serial", c.Serial(), "abi", e.ABI)
 		}
@@ -145,16 +145,16 @@ func startAPI(ctx context.Context, snap config.Snapshot, pkgMgr *packages.Manage
 }
 
 // warnAPISecurityPosture logs prominent warnings when the API is running without
-// recommended hardening. These are not fatal — operators may have compensating
-// controls — but they must be visible at startup.
+// recommended hardening. These are not fatal â€” operators may have compensating
+// controls â€” but they must be visible at startup.
 func warnAPISecurityPosture(snap config.Snapshot) {
 	if snap.APIToken == "" {
-		slog.Warn("SECURITY: api_token is not set — any process on this host can add/remove tracked packages;" +
+		slog.Warn("SECURITY: api_token is not set â€” any process on this host can add/remove tracked packages;" +
 			" set api_token in config.yaml (min 32 chars)")
 	}
 	localhost := snap.APIHost == "127.0.0.1" || snap.APIHost == "::1" || snap.APIHost == "localhost"
 	if !localhost {
-		slog.Warn("SECURITY: API is not bound to localhost — unauthenticated if api_token is not set",
+		slog.Warn("SECURITY: API is not bound to localhost â€” unauthenticated if api_token is not set",
 			"api_host", snap.APIHost)
 	}
 }
@@ -172,11 +172,11 @@ func checkConfigPermissions(path string) {
 	}
 	mode := info.Mode()
 	if mode&0o044 != 0 {
-		slog.Warn("config file is group or world readable — api_token and other secrets may be exposed",
+		slog.Warn("config file is group or world readable â€” api_token and other secrets may be exposed",
 			"path", path, "mode", fmt.Sprintf("%04o", mode.Perm()))
 	}
 	if mode&0o022 != 0 {
-		slog.Warn("config file is group or world writable — an attacker could inject packages or redirect output",
+		slog.Warn("config file is group or world writable â€” an attacker could inject packages or redirect output",
 			"path", path, "mode", fmt.Sprintf("%04o", mode.Perm()))
 	}
 }
@@ -187,7 +187,7 @@ func checkConfigPermissions(path string) {
 func cleanTmpDir(tmpBase string) {
 	entries, err := os.ReadDir(tmpBase)
 	if err != nil {
-		return // doesn't exist yet — fine
+		return // doesn't exist yet â€” fine
 	}
 	for _, e := range entries {
 		if e.IsDir() {

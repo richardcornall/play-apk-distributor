@@ -17,20 +17,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/richardcornall/apk-distributor/adb"
-	"github.com/richardcornall/apk-distributor/sink"
+	"github.com/richardcornall/play-apk-distributor/adb"
+	"github.com/richardcornall/play-apk-distributor/sink"
 )
 
 // Extract pulls APKs for pkg from all clients, bundles them, and writes versioned output
 // under outputDir/pkg/. Calls s.OnArtifact after a successful write.
 //
-// maxAPKSizeMB is a hard ceiling applied to each individual pulled file — set to 0 to
+// maxAPKSizeMB is a hard ceiling applied to each individual pulled file â€” set to 0 to
 // use the package default of 1024 MB.
 //
 // expectedCerts maps package name to its expected SHA-256 signing certificate fingerprint
 // (64 lowercase hex chars, pre-normalised by config). If an entry exists for pkg, every
 // pulled APK is verified with apksigner before being accepted. A fingerprint mismatch
-// fails the extraction — a compromised emulator cannot forge the developer's signing cert.
+// fails the extraction â€” a compromised emulator cannot forge the developer's signing cert.
 func Extract(ctx context.Context, pkg string, versionCode int, versionName string, outputDir string, maxAPKSizeMB int, expectedCerts map[string]string, clients []adb.Device, s sink.Sink) (string, error) {
 	if maxAPKSizeMB <= 0 {
 		maxAPKSizeMB = 1024
@@ -55,7 +55,7 @@ func Extract(ctx context.Context, pkg string, versionCode int, versionName strin
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// collected maps sanitised filename → local temp path.
+	// collected maps sanitised filename â†’ local temp path.
 	// First write wins for shared splits (base, density, language) so we avoid
 	// duplicating identical content from multiple emulators.
 	collected := map[string]string{}
@@ -73,7 +73,7 @@ func Extract(ctx context.Context, pkg string, versionCode int, versionName strin
 	}
 
 	if len(collected) == 0 {
-		return "", fmt.Errorf("no APKs collected for %s — all emulators may be offline or package not installed", pkg)
+		return "", fmt.Errorf("no APKs collected for %s â€” all emulators may be offline or package not installed", pkg)
 	}
 
 	abis := make([]string, 0, len(clients))
@@ -159,7 +159,7 @@ func pullOneAPK(ctx context.Context, client adb.Device, devicePath, emulatorDir 
 	}
 	if info, err := os.Stat(localPath); err == nil && info.Size() > maxBytes {
 		os.Remove(localPath)
-		return fmt.Errorf("APK %s from %s is %d MB, exceeds limit — aborting extraction",
+		return fmt.Errorf("APK %s from %s is %d MB, exceeds limit â€” aborting extraction",
 			filename, client.Serial(), info.Size()/(1024*1024))
 	}
 	if expectedCert != "" {
@@ -176,7 +176,7 @@ func pullOneAPK(ctx context.Context, client adb.Device, devicePath, emulatorDir 
 // Requires a .apk extension, safe characters only, and no leading dot.
 // Prevents a compromised emulator from injecting arbitrary filenames into the output dir.
 func safeFilename(devicePath string) (string, error) {
-	name := path.Base(devicePath) // device paths are Linux — use path, not filepath
+	name := path.Base(devicePath) // device paths are Linux â€” use path, not filepath
 	if !strings.HasSuffix(name, ".apk") {
 		return "", fmt.Errorf("filename %q does not have .apk extension", name)
 	}
@@ -307,7 +307,7 @@ func writeXAPK(pkgDir, pkg string, versionCode int, versionName string, collecte
 }
 
 // splitID derives the XAPK split ID from an APK filename.
-// "base.apk" → "base", "split_config.arm64_v8a.apk" → "config.arm64_v8a"
+// "base.apk" â†’ "base", "split_config.arm64_v8a.apk" â†’ "config.arm64_v8a"
 func splitID(filename string) string {
 	name := strings.TrimSuffix(filename, ".apk")
 	if name == "base" {

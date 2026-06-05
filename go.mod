@@ -1,4 +1,4 @@
-module github.com/richardcornall/apk-distributor
+module github.com/richardcornall/play-apk-distributor
 
 go 1.22
 

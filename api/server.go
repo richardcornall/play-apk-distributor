@@ -3,12 +3,12 @@
 // in config.yaml. If api_port is 0 or absent, no server is started.
 //
 // Authentication: set api_token in config.yaml to require a Bearer token on all
-// non-health endpoints. Strongly recommended — this service is the APK source
+// non-health endpoints. Strongly recommended â€” this service is the APK source
 // for production MDM fleets; anyone who can add packages here can influence
 // what gets deployed to managed devices.
 //
 // The server binds to 127.0.0.1 by default. Do not expose it to untrusted
-// networks — the token provides authentication but not transport encryption.
+// networks â€” the token provides authentication but not transport encryption.
 //
 // Endpoints:
 //
@@ -28,11 +28,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/richardcornall/apk-distributor/packages"
-	"github.com/richardcornall/apk-distributor/store"
+	"github.com/richardcornall/play-apk-distributor/packages"
+	"github.com/richardcornall/play-apk-distributor/store"
 )
 
-const maxBodyBytes = 1024 // package names are short — reject anything larger
+const maxBodyBytes = 1024 // package names are short â€” reject anything larger
 
 // Server is the HTTP API server.
 type Server struct {
@@ -44,7 +44,7 @@ type Server struct {
 // New creates a Server that listens on addr.
 // addr should be "127.0.0.1:<port>" for local-only access.
 // token is the Bearer token required on all non-health endpoints; pass "" to
-// disable token auth (not recommended for production — log a warning before calling).
+// disable token auth (not recommended for production â€” log a warning before calling).
 func New(addr, token string, pkgs *packages.Manager, st *store.Store) *Server {
 	s := &Server{pkgs: pkgs, st: st}
 	mux := http.NewServeMux()
@@ -198,7 +198,7 @@ func (s *Server) packageInfo(name string) packageInfo {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v) //nolint:errcheck — client disconnect is not actionable
+	json.NewEncoder(w).Encode(v) //nolint:errcheck â€” client disconnect is not actionable
 }
 
 func writeError(w http.ResponseWriter, status int, msg string) {
